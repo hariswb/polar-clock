@@ -1,0 +1,34 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Clock</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="control">
+      <ul id="clock-setting">
+        <li id="add-clock"><button>+</button></li>
+      </ul>
+      <div id="color-setting">
+        <div class="color-bar-container">
+          <div id="color-bar"></div>
+        </div>
+        <div>
+          <input type="color" id="color-inner" name="inner" value="#4D004B" />
+        </div>
+        <div>
+          <input type="color" id="color-middle" name="middle" />
+        </div>
+        <div>
+          <input type="color" id="color-outer" name="outer" value="#D1E1FF" />
+        </div>
+      </div>
+      <div><button id="apply-settings">Apply</button></div>
+    </div>
+    <div id="main">
+      <div id="clock"></div>
+    </div>
+  </body>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <script src="index.js"></script>
+</html>

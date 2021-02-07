@@ -1,0 +1,12 @@
+ul li{
+    list-style-type: none;
+}
+.clock-li div{
+    display: inline-block;
+}
+
+/* Color Bar */
+
+.color-bar-container{
+    max-width: 300px;
+}
