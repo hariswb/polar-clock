@@ -226,7 +226,7 @@ function tick(elapsed) {
       .attr("d", arc(50 + i * 30, arcLength))
       .attr("fill", colorScale(arcLength));
     d3.select(".text" + obj.id)
-      .text(hours%12 !== 0?seconds%obj.length:"")
+      .text(seconds%obj.length)
       .attr("transform", `translate(${4},${-54 - 30 * i})`);
     i += 1;
   });
