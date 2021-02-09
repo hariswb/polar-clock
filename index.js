@@ -30,7 +30,7 @@ init()
 
 function init(){
   for(let i of d3.range(3)){
-    addData(arcIndex.toString(),5)
+    addData(arcIndex.toString(),20*(i+1))
     arcIndex +=1
   }
   createClock(layerClocks, clocks);
@@ -148,7 +148,6 @@ function arc(radius, fraction) {
 }
 
 function createClock(selection, mapObject) {
-  const colorScale = setColorScale(colors);
   d3.selectAll("#g-clock").remove();
   selection
     .data(mapObject.values())
@@ -160,9 +159,7 @@ function createClock(selection, mapObject) {
     .attr("class", (d) => {
       return "arc" + d.id;
     })
-    .attr("fill", (d, i) => {
-      return colorScale(i / (mapObject.size - 1));
-    });
+
 }
 
 function updateClockList(){
@@ -214,11 +211,18 @@ function clockList(mapObjects) {
 
 function tick(elapsed) {
   let i = 0;
+  const now = new Date()
+  const secondsInMilli = now.getSeconds()*1000+now.getMilliseconds()
+  colorScale = setColorScale(colors)
+  console.log()
   clocks.forEach((obj) => {
+    const arcRad = ((secondsInMilli/1000) % obj.length) / obj.length
     d3.select(".arc" + obj.id).attr(
       "d",
-      arc(50 + i * 30, ((elapsed / 1000) % obj.length) / obj.length)
-    );
+      arc(50 + i * 30, arcRad)
+    ).attr("fill", (d, i) => {
+      return colorScale(arcRad);
+    });;
     i += 1;
   });
 }
