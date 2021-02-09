@@ -1,12 +1,20 @@
-ul li{
-    list-style-type: none;
+ul {
+  display: flex;
+  flex-direction: column;
 }
-.clock-li div{
-    display: inline-block;
+
+ul li {
+  list-style-type: none;
+}
+ul li:first-child {
+  order: 3;
+}
+.clock-li div {
+  display: inline-block;
 }
 
 /* Color Bar */
 
-.color-bar-container{
-    max-width: 300px;
+.color-bar-container {
+  max-width: 300px;
 }

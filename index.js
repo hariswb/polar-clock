@@ -7,7 +7,7 @@ let arcIndex = 0;
 
 let clocks = new Map();
 
-let timer = null
+let timer = null;
 
 const Clock = d3
   .select("#clock")
@@ -26,17 +26,18 @@ const layerColorBar = ColorBar.append("g");
 
 const layerClocks = Clock.append("g").selectAll("g");
 
-init() 
+init();
 
-function init(){
-  for(let i of d3.range(3)){
-    addData(arcIndex.toString(),20*(i+1))
-    arcIndex +=1
+function init() {
+  for (let i of d3.range(3)) {
+    addData(arcIndex.toString(), 20 * (i + 1));
+    arcIndex += 1;
   }
+  sortClocks()
   createClock(layerClocks, clocks);
   createColorBar(layerColorBar, colors);
   clockList(clocks);
-  timer = d3.timer(tick)
+  timer = d3.timer(tick);
 }
 
 // INTERACTIONS
@@ -57,40 +58,30 @@ d3.select("#color-inner").on("change", function () {
 });
 
 d3.select("#color-outer").on("change", function () {
-  if (colors.length == 2) {
-    colors[1] = this.value;
-  } else if (colors.length == 3) {
-    colors[2] = this.value;
-  }
-  createColorBar(layerColorBar, colors);
-});
-
-d3.select("#color-middle").on("change", function () {
-  if (colors.length == 2) {
-    colors.splice(1, 0, this.value);
-  } else if (colors.length == 3) {
-    colors[1] = this.value;
-  }
+  colors[1] = this.value;
   createColorBar(layerColorBar, colors);
 });
 
 // APPLY-SETTINGS
 
 d3.select("#apply-settings").on("click", function () {
-  sortClocks()
+  sortClocks();
   createClock(layerClocks, clocks);
   createColorBar(layerColorBar, colors);
   clockList(clocks);
-  timer = d3.timer(tick)
+  timer = d3.timer(tick);
 });
 
 // FUNCTIONS
 
 function addData(id, length) {
-  clocks.set(id, { id: id, length: length });
+  if(clocks.size < 5){
+
+    clocks.set(id, { id: id, length: length, unit: "sec" });
+  }
 }
 
-function sortClocks(){
+function sortClocks() {
   clocks = new Map(
     [...clocks.entries()].sort((a, b) => b[1].length - a[1].length)
   );
@@ -149,37 +140,35 @@ function arc(radius, fraction) {
 
 function createClock(selection, mapObject) {
   d3.selectAll("#g-clock").remove();
-  selection
+  const gClocks = selection
     .data(mapObject.values())
     .enter()
     .append("g")
     .attr("id", "g-clock")
-    .attr("transform", `translate(${width / 2}, ${height / 2})`)
-    .append("path")
-    .attr("class", (d) => {
-      return "arc" + d.id;
-    })
-
+    .attr("transform", `translate(${width / 2}, ${height / 2})`);
+  gClocks.append("path").attr("class", (d) => {
+    return "arc" + d.id;
+  });
+  gClocks.append("text").attr("class", (d) => {
+    return "text" + d.id;
+  });
 }
 
-function updateClockList(){
-  sortClocks()
-  clockList(clocks)
+function updateClockList() {
+  sortClocks();
+  clockList(clocks);
 }
 
 function clockList(mapObjects) {
   d3.selectAll(".clock-li").remove();
 
   mapObjects.forEach((object) => {
-    const clockList = d3
-      .select("#clock-setting")
+    const clockList = d3.select("#clock-setting")
       .append("li")
       .attr("id", "path" + object.id.toString())
       .attr("class", "clock-li")
       .attr("val", object.id);
-    clockList.append("div").html("clock " + object.id.toString());
-    clockList
-      .append("div")
+    clockList.append("div")
       .append("input")
       .attr("id", object.id)
       .attr("class", "input-clock")
@@ -187,16 +176,31 @@ function clockList(mapObjects) {
       .attr("min", 1)
       .attr("max", 60)
       .attr("value", object.length)
-      .on("change",function(event){
-        timer.stop()
-        clocks.set(this.id,{id:this.id,length:this.value})
-        updateClockList()
+      .on("change", function (event) {
+        let clock = clocks.get(object.id)
+        clock.length = this.value
+        clocks.set(object.id, clock);
+        updateClockList();
+      });
+    clockList.append("div")
+      .append("select")
+      .attr("size",2)
+      .attr("id","time-unit-"+object.id)
+      .html(`
+        <option value="sec">Sec</option>
+        <option value="min">Min</option>
+      `).on("change",function(){
+        let clock = clocks.get(object.id)
+        clock.unit = this.value
+        clocks.set(object.id,clock)
       })
+    
     clockList
       .append("div")
       .attr("class", "remove-clock")
       .append("button")
       .attr("id", object.id)
+      .html("-")
       .on("click", function (event) {
         const clockId = this.id.toString();
         if (clocks.has(clockId)) {
@@ -204,25 +208,26 @@ function clockList(mapObjects) {
           clocks.delete(clockId);
           d3.select("#path" + this.id).remove();
         }
-      })
-      .html("-");
+      });
   });
 }
 
 function tick(elapsed) {
   let i = 0;
-  const now = new Date()
-  const secondsInMilli = now.getSeconds()*1000+now.getMilliseconds()
-  colorScale = setColorScale(colors)
-  console.log()
+  const now = new Date();
+  const hours = now.getHours()
+  const seconds = now.getSeconds()
+  const secondsInMilli = now.getSeconds() * 1000 + now.getMilliseconds();
+  colorScale = setColorScale(colors);
+  
   clocks.forEach((obj) => {
-    const arcRad = ((secondsInMilli/1000) % obj.length) / obj.length
-    d3.select(".arc" + obj.id).attr(
-      "d",
-      arc(50 + i * 30, arcRad)
-    ).attr("fill", (d, i) => {
-      return colorScale(arcRad);
-    });;
+    const arcLength = ((secondsInMilli / 1000) % obj.length) / obj.length;
+    d3.select(".arc" + obj.id)
+      .attr("d", arc(50 + i * 30, arcLength))
+      .attr("fill", colorScale(arcLength));
+    d3.select(".text" + obj.id)
+      .text(hours%12 !== 0?seconds%obj.length:"")
+      .attr("transform", `translate(${4},${-54 - 30 * i})`);
     i += 1;
   });
 }
