@@ -26,14 +26,16 @@ const layerColorBar = ColorBar.append("g");
 
 const layerClocks = Clock.append("g").selectAll("g");
 
+Clock.append("g").append("text").attr("class", "dummy-date");
+
 init();
 
 function init() {
-  for (let i of d3.range(3)) {
-    addData(arcIndex.toString(), 20 * (i + 1));
+  for (let i of [5,31,60]) {
+    addData(arcIndex.toString(), i);
     arcIndex += 1;
   }
-  sortClocks()
+  sortClocks();
   createClock(layerClocks, clocks);
   createColorBar(layerColorBar, colors);
   clockList(clocks);
@@ -75,15 +77,18 @@ d3.select("#apply-settings").on("click", function () {
 // FUNCTIONS
 
 function addData(id, length) {
-  if(clocks.size < 5){
-
+  if (clocks.size < 5) {
     clocks.set(id, { id: id, length: length, unit: "sec" });
   }
 }
 
 function sortClocks() {
   clocks = new Map(
-    [...clocks.entries()].sort((a, b) => b[1].length - a[1].length)
+    [...clocks.entries()].sort((a, b) => {
+      const valueA = a[1].unit === "sec"? a[1].length:a[1].length*60
+      const valueB = b[1].unit === "sec"? b[1].length:b[1].length*60
+      return valueB - valueA
+    })
   );
 }
 
@@ -163,12 +168,14 @@ function clockList(mapObjects) {
   d3.selectAll(".clock-li").remove();
 
   mapObjects.forEach((object) => {
-    const clockList = d3.select("#clock-setting")
+    const clockList = d3
+      .select("#clock-setting")
       .append("li")
       .attr("id", "path" + object.id.toString())
       .attr("class", "clock-li")
       .attr("val", object.id);
-    clockList.append("div")
+    clockList
+      .append("div")
       .append("input")
       .attr("id", object.id)
       .attr("class", "input-clock")
@@ -177,24 +184,26 @@ function clockList(mapObjects) {
       .attr("max", 60)
       .attr("value", object.length)
       .on("change", function (event) {
-        let clock = clocks.get(object.id)
-        clock.length = this.value
+        let clock = clocks.get(object.id);
+        clock.length = this.value;
         clocks.set(object.id, clock);
         updateClockList();
       });
-    clockList.append("div")
+    clockList
+      .append("div")
       .append("select")
-      .attr("size",2)
-      .attr("id","time-unit-"+object.id)
-      .html(`
-        <option value="sec">Sec</option>
-        <option value="min">Min</option>
-      `).on("change",function(){
-        let clock = clocks.get(object.id)
-        clock.unit = this.value
-        clocks.set(object.id,clock)
-      })
-    
+      .attr("size", 2)
+      .attr("id", "time-unit-" + object.id)
+      .html(
+        `<option value="sec">Sec</option>
+        <option value="min">Min</option>`
+      )
+      .on("change", function () {
+        let clock = clocks.get(object.id);
+        clock.unit = this.value;
+        clocks.set(object.id, clock);
+      });
+
     clockList
       .append("div")
       .attr("class", "remove-clock")
@@ -205,6 +214,7 @@ function clockList(mapObjects) {
         const clockId = this.id.toString();
         if (clocks.has(clockId)) {
           d3.select(".arc" + clockId).remove();
+          d3.select(".text" + clockId).remove();
           clocks.delete(clockId);
           d3.select("#path" + this.id).remove();
         }
@@ -214,20 +224,41 @@ function clockList(mapObjects) {
 
 function tick(elapsed) {
   let i = 0;
+
   const now = new Date();
-  const hours = now.getHours()
-  const seconds = now.getSeconds()
-  const secondsInMilli = now.getSeconds() * 1000 + now.getMilliseconds();
+
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const seconds = now.getSeconds();
+
+  const timeInMillisec = now.getTime();
+  const timeInSeconds = timeInMillisec / 1000;
+  const timeInMinutes = timeInMillisec / 1000 / 60;
+
   colorScale = setColorScale(colors);
-  
+
   clocks.forEach((obj) => {
-    const arcLength = ((secondsInMilli / 1000) % obj.length) / obj.length;
-    d3.select(".arc" + obj.id)
+
+    const arcLength = obj.unit === "sec"?
+      (timeInSeconds % obj.length) / obj.length:
+      (timeInMinutes % obj.length) / obj.length;
+
+    const timeText = obj.unit === "sec"? 
+      `${Math.floor(timeInSeconds % obj.length)}s`:
+      `${Math.floor(timeInMinutes % obj.length)}m`;
+    
+      d3.select(".arc" + obj.id)
       .attr("d", arc(50 + i * 30, arcLength))
       .attr("fill", colorScale(arcLength));
     d3.select(".text" + obj.id)
-      .text(seconds%obj.length)
+      .text(timeText)
       .attr("transform", `translate(${4},${-54 - 30 * i})`);
     i += 1;
   });
+
+  d3.select(".dummy-date")
+    .text(`${hours}:${minutes}:${seconds}`)
+    .attr("transform", () => {
+      return `translate(${width / 2 - 30},${height / 2})`;
+    });
 }
