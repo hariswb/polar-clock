@@ -12,9 +12,20 @@ let timer = null;
 const Clock = d3
   .select("#clock")
   .append("svg")
-  .attr("width", width)
-  .attr("height", height)
-  .style("background-color", "whitesmoke");
+  .attr("id", "clock-svg")
+  .attr("preserveAspectRatio", "xMinYMin meet")
+  .attr("viewBox", `0 0 ${width} ${height}`);
+
+const layerClocks = Clock.append("g").selectAll("g");
+
+const ClockMap = d3
+  .select("#clock-map")
+  .append("svg")
+  .attr("id", "clock-map-svg")
+  .attr("preserveAspectRatio", "xMinYMin meet")
+  .attr("viewBox", `0 0 ${500} ${500}`);
+
+const layerClockMap = ClockMap.append("g");
 
 const ColorBar = d3
   .select("#color-bar")
@@ -24,21 +35,23 @@ const ColorBar = d3
 
 const layerColorBar = ColorBar.append("g");
 
-const layerClocks = Clock.append("g").selectAll("g");
-
 Clock.append("g").append("text").attr("class", "dummy-date");
 
 init();
 
 function init() {
-  for (let i of [5,31,60]) {
+  for (let i of [5, 31, 60]) {
     addData(arcIndex.toString(), i);
     arcIndex += 1;
   }
   sortClocks();
+
   createClock(layerClocks, clocks);
   createColorBar(layerColorBar, colors);
+
+  createClockMap(layerClockMap, clocks);
   clockList(clocks);
+
   timer = d3.timer(tick);
 }
 
@@ -48,6 +61,7 @@ function init() {
 
 d3.select("#add-clock").on("click", function () {
   addData(arcIndex.toString(), 5);
+  createClockMap(layerClockMap, clocks);
   clockList(clocks);
   arcIndex += 1;
 });
@@ -70,7 +84,10 @@ d3.select("#apply-settings").on("click", function () {
   sortClocks();
   createClock(layerClocks, clocks);
   createColorBar(layerColorBar, colors);
+
   clockList(clocks);
+  createClockMap(layerClockMap, clocks);
+
   timer = d3.timer(tick);
 });
 
@@ -85,9 +102,9 @@ function addData(id, length) {
 function sortClocks() {
   clocks = new Map(
     [...clocks.entries()].sort((a, b) => {
-      const valueA = a[1].unit === "sec"? a[1].length:a[1].length*60
-      const valueB = b[1].unit === "sec"? b[1].length:b[1].length*60
-      return valueB - valueA
+      const valueA = a[1].unit === "sec" ? a[1].length : a[1].length * 60;
+      const valueB = b[1].unit === "sec" ? b[1].length : b[1].length * 60;
+      return valueB - valueA;
     })
   );
 }
@@ -132,11 +149,11 @@ function createColorBar(selection, colors) {
     .attr("fill", "url(#gradient)");
 }
 
-function arc(radius, fraction) {
+function arc(arcThickness,radius, fraction) {
   const arc = d3
     .arc()
     .innerRadius(radius)
-    .outerRadius(radius + 20)
+    .outerRadius(radius + arcThickness)
     .cornerRadius(20)
     .startAngle(0)
     .endAngle(2 * Math.PI * fraction);
@@ -155,7 +172,7 @@ function createClock(selection, mapObject) {
     return "arc" + d.id;
   });
   gClocks.append("text").attr("class", (d) => {
-    return "text" + d.id;
+    return "text" + d.id + " text-clock";
   });
 }
 
@@ -164,12 +181,31 @@ function updateClockList() {
   clockList(clocks);
 }
 
+function createClockMap(selection, mapObject) {
+  d3.selectAll("#g-clock-map").remove();
+  const colorScale = setColorScale(colors);
+  const gClockMap = selection
+    .selectAll("g")
+    .data(mapObject.values())
+    .enter()
+    .append("g")
+    .attr("id", "g-clock-map")
+    .attr("transform", `translate(${width / 2}, ${height / 2})`);
+  gClockMap
+    .append("path")
+    .attr("class", (d) => {
+      return "arc-map" + d.id;
+    })
+    .attr("d", (d, i) => arc(26,50 + i * 40, (i + 1) * 0.18))
+    .attr("fill", (d, i) => colorScale((i + 1) * 0.18));
+}
+
 function clockList(mapObjects) {
   d3.selectAll(".clock-li").remove();
 
   mapObjects.forEach((object) => {
     const clockList = d3
-      .select("#clock-setting")
+      .select("#clock-list")
       .append("li")
       .attr("id", "path" + object.id.toString())
       .attr("class", "clock-li")
@@ -218,6 +254,7 @@ function clockList(mapObjects) {
           clocks.delete(clockId);
           d3.select("#path" + this.id).remove();
         }
+        createClockMap(layerClockMap, clocks);
       });
   });
 }
@@ -235,20 +272,21 @@ function tick(elapsed) {
   const timeInSeconds = timeInMillisec / 1000;
   const timeInMinutes = timeInMillisec / 1000 / 60;
 
-  colorScale = setColorScale(colors);
+  const colorScale = setColorScale(colors);
 
   clocks.forEach((obj) => {
+    const arcLength =
+      obj.unit === "sec"
+        ? (timeInSeconds % obj.length) / obj.length
+        : (timeInMinutes % obj.length) / obj.length;
 
-    const arcLength = obj.unit === "sec"?
-      (timeInSeconds % obj.length) / obj.length:
-      (timeInMinutes % obj.length) / obj.length;
+    const timeText =
+      obj.unit === "sec"
+        ? `${Math.floor(timeInSeconds % obj.length)}s`
+        : `${Math.floor(timeInMinutes % obj.length)}m`;
 
-    const timeText = obj.unit === "sec"? 
-      `${Math.floor(timeInSeconds % obj.length)}s`:
-      `${Math.floor(timeInMinutes % obj.length)}m`;
-    
-      d3.select(".arc" + obj.id)
-      .attr("d", arc(50 + i * 30, arcLength))
+    d3.select(".arc" + obj.id)
+      .attr("d", arc(20,50 + i * 30, arcLength))
       .attr("fill", colorScale(arcLength));
     d3.select(".text" + obj.id)
       .text(timeText)

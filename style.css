@@ -13,6 +13,23 @@ ul li:first-child {
   display: inline-block;
 }
 
+/* Clock-Map */
+
+.clock-map-container{
+  max-width: 150px;
+  background-color: whitesmoke;
+}
+
+/* Clock */
+
+.clock-container{
+  max-width: 700px;
+}
+
+.text-clock{
+
+}
+
 /* Color Bar */
 
 .color-bar-container {
